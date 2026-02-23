@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>INTERROGATION: SALVAGE GRAPPLER</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            touch-action: none;
+            font-family: 'Courier New', Courier, monospace;
+            -webkit-user-select: none;
+        }
+
+        /* 尋問室背景 */
+        .interrogation-chamber {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            background-image: 
+                radial-gradient(circle at 50% 30%, rgba(255,255,255,0.05) 0%, transparent 70%),
+                repeating-linear-gradient(0deg, #000, #000 1px, #050505 1px, #050505 2px);
+            z-index: -1;
+        }
+
+        /* 衝撃時のフラッシュ */
+        .impact-overlay {
+            position: fixed;
+            inset: 0;
+            background: #fff;
+            mix-blend-mode: difference;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 50;
+        }
+        .impact-active {
+            animation: impact-flash 0.35s ease-out;
+        }
+        @keyframes impact-flash {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 0; }
+        }
+
+        /* ターゲットの揺れ */
+        .shake-anim {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake {
+            0% { transform: translate(0,0) scale(1.05); }
+            10% { transform: translate(-15px, 15px); }
+            30% { transform: translate(15px, -15px); }
+            50% { transform: translate(-8px, 8px); }
+            100% { transform: translate(0,0) scale(1); }
+        }
+
+        .confession-log {
+            height: 80px;
+            overflow-y: auto;
+            border-top: 1px solid #333;
+            font-size: 9px;
+            color: #666;
+            mask-image: linear-gradient(transparent, #000 15%, #000 85%, transparent);
+        }
+
+        .digital-font {
+            text-shadow: 0 0 15px rgba(255,255,255,0.4);
+            letter-spacing: -2px;
+        }
+
+        .share-btn {
+            background: #fff;
+            color: #000;
+            font-weight: 900;
+            clip-path: polygon(5% 0%, 100% 0%, 95% 100%, 0% 100%);
+        }
+
+        /* 画像コンテナ */
+        .target-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+        .active-image {
+            display: block;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-between min-h-screen p-4">
+
+    <div id="impact-flash" class="impact-overlay"></div>
+    <div class="interrogation-chamber"></div>
+
+    <!-- Header: Machine Status Panel -->
+    <div class="w-full border-2 border-white p-3 bg-black z-30">
+        <div class="flex justify-between items-end mb-1">
+            <span class="text-[8px] tracking-[0.4em] text-zinc-500 font-bold">INTERROGATOR_UNIT: 01</span>
+            <span class="text-[8px] text-zinc-500">G-CONSTANT</span>
+        </div>
+        <div class="flex items-baseline justify-center gap-4">
+            <div id="current-score" class="text-7xl font-black italic digital-font">00.0</div>
+            <div class="text-xs font-bold border-l border-zinc-700 pl-4">
+                <div class="text-zinc-500 text-[8px]">MAX_RECORD</div>
+                <span id="max-score" class="text-lg">00.0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Viewport: The Captive (Images) -->
+    <div class="flex-1 w-full flex flex-col items-center justify-center relative">
+        <div id="target-container" class="relative w-full max-w-[340px] aspect-[2/3] flex items-center justify-center overflow-hidden">
+            <!-- 待機中の画像：ここに「ゲーム中.png」を適用してください -->
+            <img id="img-idle" src="game_chuu.png" alt="[ゲーム中]" class="target-image active-image">
+            
+            <!-- 衝撃時の画像：ここに「リザルト.png」を適用してください -->
+            <img id="img-impact" src="result.png" alt="[ドゴォッ！]" class="target-image">
+        </div>
+
+        <div id="status-label" class="absolute bottom-4 text-[9px] tracking-[0.6em] text-zinc-700 font-bold uppercase">
+            Capturing Kinetic Motion
+        </div>
+    </div>
+
+    <!-- Footer: Logs & Interactive Controls -->
+    <div class="w-full max-w-sm space-y-4 mb-2">
+        <div id="log" class="confession-log p-2 font-mono">
+            <div>> SYSTEM_ARMED_READY</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <div class="border border-zinc-800 p-2 bg-zinc-950">
+                <div class="flex justify-between text-[8px] text-zinc-500 mb-1 font-bold">
+                    <span>SENSITIVITY</span>
+                    <span id="sens-val">5.0 G</span>
+                </div>
+                <input type="range" id="sens-slider" min="1" max="15" step="0.5" value="5.0" class="w-full accent-white">
+            </div>
+            <button id="share-btn" class="share-btn px-4 py-2 text-[10px] flex items-center justify-center gap-2">
+                RECORD_SHARE
+            </button>
+        </div>
+    </div>
+
+    <!-- Entry Screen Overlay -->
+    <div id="overlay" class="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center p-12 text-center">
+        <div class="mb-10 border-l-2 border-white pl-6 text-left">
+            <div class="text-[9px] text-zinc-500 mb-2 font-bold tracking-widest uppercase">Protocol: Physical Confession</div>
+            <div class="text-6xl font-black italic tracking-tighter leading-none mb-4">執行</div>
+            <p class="text-[9px] text-zinc-600 leading-relaxed uppercase tracking-widest">
+                Force the captive to confess.<br>
+                Strike with kinetic energy.
+            </p>
+        </div>
+        
+        <button id="start-btn" class="w-full max-w-xs py-7 border-2 border-white text-white font-black text-3xl hover:bg-white hover:text-black transition-all italic tracking-tighter">
+            EXECUTE
+        </button>
+        <div class="mt-12 text-[7px] text-zinc-800 font-mono tracking-[0.4em] uppercase">
+            Authentication Level: High // Interrogator-01
+        </div>
+    </div>
+
+    <script>
+        const overlay = document.getElementById('overlay');
+        const startBtn = document.getElementById('start-btn');
+        const targetContainer = document.getElementById('target-container');
+        const imgIdle = document.getElementById('img-idle');
+        const imgImpact = document.getElementById('img-impact');
+        const impactFlash = document.getElementById('impact-flash');
+        const scoreDisplay = document.getElementById('current-score');
+        const maxDisplay = document.getElementById('max-score');
+        const logEl = document.getElementById('log');
+        const shareBtn = document.getElementById('share-btn');
+        const sensSlider = document.getElementById('sens-slider');
+        const sensVal = document.getElementById('sens-val');
+
+        let isRunning = false;
+        let maxPower = 0;
+        let lastX = 0, lastY = 0, lastZ = 0;
+        let lastPunchTime = 0;
+        let threshold = 5.0;
+
+        sensSlider.oninput = () => { 
+            threshold = parseFloat(sensSlider.value); 
+            sensVal.innerText = threshold.toFixed(1) + " G";
+        };
+
+        function addLog(power) {
+            const time = new Date().toLocaleTimeString('ja-JP', {hour12: false});
+            const entry = document.createElement('div');
+            entry.innerHTML = `<span class="text-zinc-800">[${time}]</span> <span class="text-zinc-300">IMPACT: ${power.toFixed(2)}G</span>`;
+            logEl.prepend(entry);
+            if(logEl.childNodes.length > 12) logEl.lastChild.remove();
+        }
+
+        function triggerImpact(power) {
+            const now = Date.now();
+            if(now - lastPunchTime < 350) return;
+            lastPunchTime = now;
+
+            if(power > maxPower) {
+                maxPower = power;
+                maxDisplay.innerText = maxPower.toFixed(1);
+            }
+
+            scoreDisplay.innerText = power.toFixed(1);
+
+            // 画像切り替え
+            imgIdle.classList.remove('active-image');
+            imgImpact.classList.add('active-image');
+            
+            // 演出
+            impactFlash.classList.remove('impact-active');
+            void impactFlash.offsetWidth;
+            impactFlash.classList.add('impact-active');
+
+            targetContainer.classList.remove('shake-anim');
+            void targetContainer.offsetWidth;
+            targetContainer.classList.add('shake-anim');
+
+            addLog(power);
+
+            if(navigator.vibrate) {
+                navigator.vibrate(Math.min(30 + power * 15, 400));
+            }
+
+            // 待機画像に戻す
+            setTimeout(() => {
+                imgIdle.classList.add('active-image');
+                imgImpact.classList.remove('active-image');
+            }, 450);
+        }
+
+        function handleMotion(event) {
+            if(!isRunning) return;
+            const acc = event.accelerationIncludingGravity || event.acceleration;
+            if(!acc || acc.x === null) return;
+
+            const dx = acc.x - lastX;
+            const dy = acc.y - lastY;
+            const dz = acc.z - lastZ;
+            const power = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+            lastX = acc.x; lastY = acc.y; lastZ = acc.z;
+
+            if(power > threshold) {
+                triggerImpact(power);
+            }
+        }
+
+        startBtn.onclick = async () => {
+            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                try {
+                    const res = await DeviceMotionEvent.requestPermission();
+                    if(res === 'granted') init();
+                    else alert("SENSORS MUST BE ACCESSED.");
+                } catch(e) { init(); }
+            } else { init(); }
+        };
+
+        function init() {
+            isRunning = true;
+            overlay.style.display = 'none';
+            window.addEventListener('devicemotion', handleMotion, true);
+        }
+
+        shareBtn.onclick = () => {
+            const text = `【尋問結果】救済パンチングマシーンによって不浄が自白された。\n最大衝撃度：${maxPower.toFixed(2)} G\n\n#救済のパンチグラップラー #尋問室の自白`;
+            const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        };
+    </script>
+</body>
+</html>
