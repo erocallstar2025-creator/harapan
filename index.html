@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>INTERROGATION: ASSET EMBED</title>
+    <title>INTERROGATION: WITH CREDIT</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@900&display=swap');
@@ -33,7 +33,7 @@
         .target-frame {
             position: relative;
             width: 90vw;
-            height: 60vh;
+            height: 55vh;
             border: 1px solid #333;
             background: #050505;
             display: flex;
@@ -46,7 +46,6 @@
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
-            /* 尋問の雰囲気を出すためのフィルタ */
             filter: grayscale(1) contrast(1.1) brightness(0.9);
         }
 
@@ -81,6 +80,13 @@
             cursor: pointer;
         }
         .btn-interrogation:active { background: #fff; color: #000; }
+
+        .credit-text {
+            font-size: 10px;
+            color: #666;
+            margin-top: 8px;
+            letter-spacing: 0.05em;
+        }
     </style>
 </head>
 <body>
@@ -121,8 +127,13 @@
             <h2 class="text-2xl font-black italic">供述調書</h2>
         </div>
 
-        <div class="target-frame mb-6" style="height: 40vh;">
+        <div class="target-frame mb-4" style="height: 35vh;">
             <img id="result-img-display" src="" class="target-img" alt="Result">
+        </div>
+
+        <!-- クレジット表記 -->
+        <div class="credit-text mb-4 text-center">
+            キャラクター：およよちゃん　Made by みかっち
         </div>
 
         <div class="w-full max-w-xs space-y-2 mb-6 font-mono">
@@ -144,10 +155,9 @@
         /**
          * ⚠️ 重要 ⚠️
          * 画像を表示するには、ここにBase64文字列を貼り付けてください。
-         * 現在はファイル名がそのまま入っていますが、これでは表示されません。
          */
-        const imgGameBase64 = "ゲーム中.png"; // ここにBase64データを貼り付け
-        const imgResultBase64 = "リザルト.png"; // ここにBase64データを貼り付け
+        const imgGameBase64 = "ゲーム中.png"; 
+        const imgResultBase64 = "リザルト.png"; 
 
         let isRunning = false;
         let hits = 0;
@@ -158,7 +168,7 @@
         const mainImgEl = document.getElementById('main-img');
         const resImgEl = document.getElementById('result-img-display');
 
-        // 初期設定：画像ソースをセット
+        // 初期設定
         mainImgEl.src = imgGameBase64;
         resImgEl.src = imgResultBase64;
 
@@ -209,7 +219,6 @@
             const flash = document.getElementById('flash');
             const label = document.getElementById('hit-label');
 
-            // パンチの瞬間だけリザルト画像に
             mainImgEl.src = imgResultBase64;
             mainImgEl.classList.add('impact-shake');
             flash.classList.add('flash-active');
@@ -234,7 +243,7 @@
         }
 
         function shareToX() {
-            const text = `【供述調書】尋問執行完了。\n最大衝撃：${maxPower.toFixed(1)} G\n救済パンチ数：${hits} 回\n#救済のパンチグラップラー #尋問執行`;
+            const text = `【供述調書】尋問執行完了。\nキャラクター：およよちゃん Made by みかっち\n最大衝撃：${maxPower.toFixed(1)} G\n救済パンチ数：${hits} 回\n#救済のパンチグラップラー #尋問執行`;
             const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
             window.open(url, '_blank');
         }
